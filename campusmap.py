@@ -34,6 +34,9 @@ class CampusMap:
             else:
                 _campus_map[zone] = _campus_map[zone] | set(buildings)
 
+        # 누락된 자료 개별 추가
+        _campus_map['D'].update([201, 203])
+
         return _campus_map
 
     MAP = draw_campus_map()
