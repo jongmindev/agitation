@@ -10,7 +10,8 @@ ADJACENT_ZONE = {
     'H': "BCI",
     'E': "DCG",
     'G': "E",
-    'F': ""
+    'F': "",
+    'Y': ""
 }
 
 
@@ -36,6 +37,7 @@ class CampusMap:
 
         # 누락된 자료 개별 추가
         _campus_map['D'].update([201, 203])
+        _campus_map['Y'] = {'#12', '#012', '#21', '#021'}
 
         return _campus_map
 
