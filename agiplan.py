@@ -1,6 +1,7 @@
 import campusmap
 import os
 import pandas as pd
+import numpy as np
 
 
 class _LoadPlans:
@@ -124,33 +125,36 @@ class ModifiedAgiList:
         return self._m_agilist
 
 
-# class PlanAppend:
-#     if not os.path.isfile(r'csv\agilist.csv'):
-#         AgiList().save_agilist()
-#     campus_map = campusmap.CampusMap.MAP
-#
-#     @classmethod
-#     def append_zone(cls, _plans: dict[str, pd.DataFrame]):
-#         def map_zone(row: pd.Series):
-#             building = str(row.loc['장소']).split('-')[0]
-#             try:
-#                 return campusmap.CampusMap.zone(int(building))
-#             except ValueError:
-#                 return 'Y'
-#
-#         for college, plan in _plans.items():
-#             _plans[college]['구역'] = plan.apply(map_zone, axis=1)
-#
-#         return _plans
-#
-#     @classmethod
-#     def append_start(cls, _plans: dict[str, pd.DataFrame]):
-#         def map_start(row: pd.Series):
-#             lecture_time = str(row.loc['시간'])
-#
-# PlanAppend()
+class AgiListPartition(ModifiedAgiList):
+    def __init__(self, partition_numbers: int):
+        super().__init__()
+        self._partition = self._randomly_partition_agilist(partition_numbers)
+
+    def _randomly_partition_agilist(self, partition_numbers: int) -> list[pd.DataFrame]:
+        lecture_indices = list(super().m_agilist.index)
+        np.random.shuffle(lecture_indices)
+
+        list_of_split_indices = np.array_split(lecture_indices, partition_numbers)
+        split_agiplans = []
+        for index in list_of_split_indices:
+            split_agiplans.append(super().m_agilist.loc[index])
+
+        return split_agiplans
+
+    @property
+    def total_agilist(self):
+        return super().m_agilist
+
+    @property
+    def partition_agilist(self):
+        return self._partition
 
 
 if __name__ == '__main__':
-    agilist = ModifiedAgiList().m_agilist
-    print(agilist)
+    # agilist = ModifiedAgiList().m_agilist
+    # print(agilist)
+    random_splitter = AgiListPartition(4)
+    total = random_splitter.total_agilist
+    partition = random_splitter.partition_agilist
+    print(total)
+    print(partition)
