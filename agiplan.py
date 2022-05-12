@@ -3,12 +3,12 @@ import os
 import pandas as pd
 
 
-class LoadPlans:
+class _LoadPlans:
     def __init__(self):
         self._plans = self.read_multiple_plan_files()
 
-    @classmethod
-    def read_multiple_plan_files(cls):
+    @staticmethod
+    def read_multiple_plan_files():
         folder = r'C:\Users\12skd\Dev\PycharmProjects\agitation\data\plan'
         files = os.listdir(folder)
 
@@ -27,7 +27,7 @@ class LoadPlans:
         return self._plans
 
 
-class AgiList:
+class _AgiList:
     def __init__(self):
         _col = ['개설대학', '개설학과', '교과목번호', '강좌번호', '교과목명', '부제명',
                 '수업교시', '강의실(동-호)(#연건, *평창)', '수강신청인원']
@@ -36,7 +36,7 @@ class AgiList:
         self._AGILIST = self._SUGANG.loc[self._SUGANG.check == 1].drop(columns='check').reset_index(drop=True)
 
     def _check_plans(self):
-        _plans = LoadPlans().plans
+        _plans = _LoadPlans().plans
         for college, plan in _plans.items():
             for index, row in plan.iterrows():
                 condition1 = self._SUGANG.교과목명.str.replace(' ', '').str.contains(row['수업이름'].replace(' ', ''))
@@ -57,12 +57,12 @@ class AgiList:
         return self._AGILIST
 
 
-class ModifyAgiList:
+class ModifiedAgiList:
     def __init__(self):
         if os.path.isfile(r'csv\agilist.csv'):
             self._agilist = pd.read_csv(r"csv\agilist.csv")
         else:
-            self._agilist = AgiList().agilist
+            self._agilist = _AgiList().agilist
         self._m_agilist = self._modify_agilist()
 
     def _day_and_time(self) -> pd.DataFrame:
@@ -110,7 +110,7 @@ class ModifyAgiList:
 
         return zone_series
 
-    def _modify_agilist(self):
+    def _modify_agilist(self) -> pd.DataFrame:
         col_college = self._agilist.개설대학
         col_college.name = 'college'
         col_daytime = self._day_and_time()
@@ -152,5 +152,5 @@ class ModifyAgiList:
 
 
 if __name__ == '__main__':
-    agilist = ModifyAgiList().m_agilist
+    agilist = ModifiedAgiList().m_agilist
     print(agilist)

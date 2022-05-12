@@ -1,12 +1,13 @@
-import numpy as np
 import campusmap
+import numpy as np
 import pandas as pd
+import os
 
 
 ALL = 'ABCDEFGHIJK'
 
 
-class TimetableBy30Min:
+class _TimetableBy30Min:
     # 시간표가 15분 단위 구분인 것을 30분 단위로 변경
     @staticmethod
     def _fill_last_15min(day: pd.Series):
@@ -27,7 +28,7 @@ class TimetableBy30Min:
 # example = TimetableBy30Min.modify_by_30min(example)
 
 
-class ModifyTimetable:
+class _ModifyTimetable:
     # ① 수업이 없는 날(공강일)
     @staticmethod
     def no_school(day: pd.Series):
@@ -79,42 +80,64 @@ class ModifyTimetable:
             return element
 
 
-class PreprocessedTimetable:
-    @ staticmethod
+class _PreprocessedTimetable:
+    @staticmethod
     def preprocess(_filepath: str):
         _timetable = pd.read_csv(_filepath, dtype=object)
-        tt_30min = TimetableBy30Min.modify_by_30min(_timetable)
+        tt_30min = _TimetableBy30Min.modify_by_30min(_timetable)
         # print('raw', tt_30min)
         # print()
-        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(ModifyTimetable.no_school, axis=0)
+        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(_ModifyTimetable.no_school, axis=0)
         # print('no school', tt_30min)
         # print()
-        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(ModifyTimetable.at_yeongeon, axis=0)
+        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(_ModifyTimetable.at_yeongeon, axis=0)
         # print('yeongeon', tt_30min)
         # print()
-        ModifyTimetable.right_after_lecture(tt_30min)
+        _ModifyTimetable.right_after_lecture(tt_30min)
         # print('right after', tt_30min)
         # print()
-        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(ModifyTimetable.after_school, axis=0)
+        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].apply(_ModifyTimetable.after_school, axis=0)
         # print('after school', tt_30min)
         # print()
-        tt_30min.loc[:, '월':'금'] = ModifyTimetable.between_lecture(tt_30min.loc[:, '월':'금'])
+        tt_30min.loc[:, '월':'금'] = _ModifyTimetable.between_lecture(tt_30min.loc[:, '월':'금'])
         # print('between', tt_30min)
         # print()
-        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].applymap(ModifyTimetable.during_lecture)
+        tt_30min.loc[:, '월':'금'] = tt_30min.loc[:, '월':'금'].applymap(_ModifyTimetable.during_lecture)
+        tt_30min.set_index('시작시간', inplace=True)
         return tt_30min
 
 
-if __name__ == '__main__':
+class LoadTimetables:
+    _default_folder = r"C:\Users\12skd\Dev\PycharmProjects\agitation\data\members"
 
+    @staticmethod
+    def read_multiple_timetables(folder=_default_folder) -> dict[str, pd.DataFrame]:
+        files = os.listdir(folder)
+
+        _timetables = {}
+        for file in files:
+            if file.endswith('.csv'):
+                name = file[:-4]
+                _filepath = os.path.join(folder, file)
+                df = _PreprocessedTimetable.preprocess(_filepath)
+                _timetables[name] = df
+
+        return _timetables
+
+
+if __name__ == '__main__':
     # filepath = r"data\members\고나영.csv"
     # filepath = r"data\members\김민정.csv"
     filepath = r"data\members\권세린.csv"
 
-    raw = TimetableBy30Min.modify_by_30min(pd.read_csv(filepath, dtype=object))
+    raw = _TimetableBy30Min.modify_by_30min(pd.read_csv(filepath, dtype=object))
     try:
-        timetable = PreprocessedTimetable.preprocess(filepath)
+        timetable = _PreprocessedTimetable.preprocess(filepath)
         print(pd.concat([timetable, raw], axis='columns'))
     except Exception as e:
         print(raw)
         print(e)
+
+    timetables = LoadTimetables.read_multiple_timetables()
+    for name, timetable in timetables.items():
+        print(name, timetable)
