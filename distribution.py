@@ -1,4 +1,4 @@
-import agiplan
+import lectureslistup
 import members
 import pandas as pd
 import numpy as np
@@ -38,13 +38,14 @@ class Counter:
         return num
 
     @staticmethod
-    def _initialize_members(agi_plan: pd.DataFrame) -> dict[int, list]:
+    def _initialize_members(agi_plan: pd.DataFrame) -> dict[int, list[str]]:
         mem = {}
         for index in list(agi_plan.index):
             mem[index] = []
         return mem
 
-    def update_assignment(self, assigned_members: list[str], lecture_index: int):
+    def update_assignment(self, assigned_members: list[str], lecture_index: int, when: int):
+        self.assigned_members_by_lecture[lecture_index].append(when)
         for name in assigned_members:
             self.assigned_lecture_by_members[name].append(lecture_index)
             self.assigned_number_by_members[name] += 1
@@ -155,7 +156,7 @@ class Distribution:
         assigned_members = Assign.assign_members(day, time, zone, students,
                                                  self._timetables, self._counter.assigned_number_by_members)
 
-        self._counter.update_assignment(assigned_members, lecture_index)
+        self._counter.update_assignment(assigned_members, lecture_index, when)
         self._timetables = Assign.updated_members_timetable(assigned_members, day, time, self._timetables)
 
     def assign_all_lectures(self, agilist: pd.DataFrame):
@@ -197,9 +198,9 @@ class Distribution:
 
 if __name__ == "__main__":
     partition_size = 4
-    ga_agilist = agiplan.AgilistPartitionGA(partition_size)
+    ga_agilist = lectureslistup.AgilistPartitionGA(partition_size)
     first = Distribution(ga_agilist.ga_only_partition_agilist[0])
-    # gayg_agilist = agiplan.AgiListPartition(partition_size)
+    # gayg_agilist = lectureslistup.AgiListPartition(partition_size)
     # first = Distribution(gayg_agilist.partition_agilist[0])
     # first.assign_until_success(20)
 
@@ -209,4 +210,3 @@ if __name__ == "__main__":
         sub_planner.assign_until_success(20)
         print(sub_planner.assigned_members_by_lecture)
         print(sub_planner.assigned_lecture_by_members)
-
