@@ -143,12 +143,19 @@ class AgiListPartition(ModifiedAgiList):
 class AgilistPartitionGA(AgiListPartition):
     def __init__(self, partition_size: int):
         super().__init__(partition_size)
+        self._ga_agilist = self.extract_ga_from_agilist()
         self._partition_ga = self.ga_only_partitioned_agilist(partition_size)
 
-    def ga_only_partitioned_agilist(self, partition_size: int):
+    def extract_ga_from_agilist(self) -> pd.DataFrame:
         ga_only_mask = super().m_agilist.zone.map(lambda lecture_zone_list: 'Y' not in lecture_zone_list)
-        ga_only_total_agilist = super().m_agilist.loc[ga_only_mask]
-        return tools.RandomSplitDataFrame.split(ga_only_total_agilist, partition_size)
+        return super().m_agilist.loc[ga_only_mask]
+
+    def ga_only_partitioned_agilist(self, partition_size: int) -> list[pd.DataFrame]:
+        return tools.RandomSplitDataFrame.split(self._ga_agilist, partition_size)
+
+    @property
+    def ga_only_total_agilist(self):
+        return self._ga_agilist
 
     @property
     def ga_only_partition_agilist(self):
