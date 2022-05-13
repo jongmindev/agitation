@@ -55,10 +55,14 @@ class AgitationPlannerGA:
                 member_assignment.sort()
         v_board = pd.DataFrame(members_board)
         v_board['total'] = v_board.apply(axis=1, func=lambda row: sum(row.map(len)))
+        column_label_map = {before: str(before)+'(th) week' for before in range(1, len(v_board.iloc[0])+1)}
+        v_board.rename(columns=column_label_map, inplace=True)
         return v_board
 
 
 if __name__ == "__main__":
     planner = AgitationPlannerGA(partition_size=4)
-    print(planner.visualized_lecture_board())
-    print(planner.visualized_members_board())
+    print(planner.visualized_lecture_board().head(10))
+    print(planner.visualized_members_board().head(10))
+
+    print(lectureslistup.ModifiedAgiList().m_agilist.head(10))
