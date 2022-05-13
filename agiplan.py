@@ -135,11 +135,11 @@ class AgiListPartition(ModifiedAgiList):
         np.random.shuffle(lecture_indices)
 
         list_of_split_indices = np.array_split(lecture_indices, partition_numbers)
-        split_agiplans = []
+        split_agilists = []
         for index in list_of_split_indices:
-            split_agiplans.append(super().m_agilist.loc[index])
+            split_agilists.append(super().m_agilist.loc[index])
 
-        return split_agiplans
+        return split_agilists
 
     @property
     def total_agilist(self):

@@ -1,16 +1,15 @@
 import agiplan
 import members
 import pandas as pd
-import random
 import numpy as np
 import os
 
 
 class Counter:
-    def __init__(self, agi_plans: pd.DataFrame):
+    def __init__(self, agi_plan: pd.DataFrame):
         self.assigned_lecture_by_members = self._initialize_lecture()
         self.assigned_number_by_members = self._initialize_number()
-        self.assigned_members_by_lecture = self._initialize_members(agi_plans)
+        self.assigned_members_by_lecture = self._initialize_members(agi_plan)
 
     @staticmethod
     def _initialize_lecture() -> dict[str, list[int]]:
@@ -39,9 +38,9 @@ class Counter:
         return num
 
     @staticmethod
-    def _initialize_members(agi_plans: pd.DataFrame) -> dict[int, list]:
+    def _initialize_members(agi_plan: pd.DataFrame) -> dict[int, list]:
         mem = {}
-        for index in list(agi_plans.index):
+        for index in list(agi_plan.index):
             mem[index] = []
         return mem
 
@@ -102,7 +101,7 @@ class Assign:
         :return: list of available members
         """
         available_members = []
-        if time >= 1800:
+        if (time >= 1800) | (day == '토'):
             available_members = list(timetables.keys())
         else:
             for name, timetable in timetables.items():
@@ -144,17 +143,17 @@ class Assign:
         return timetables
 
 
-class PartialDistribution:
-    def __init__(self, agi_plans: pd.DataFrame):
-        self.AGI_PLANS = agi_plans
-        self._counter = Counter(agi_plans)
+class Distribution:
+    def __init__(self, agilist: pd.DataFrame):
+        self._agilist = agilist
+        self._counter = Counter(agilist)
         self._timetables = members.LoadTimetables.read_multiple_timetables()
-        # choice_weighted_inversely.counter = 0
 
-    def assign_a_lecture(self, lecture_index: int):
-        lecture = self.AGI_PLANS.loc[lecture_index]
+    def assign_a_lecture(self, agilist: pd.DataFrame, lecture_index: int):
+        lecture = agilist.loc[lecture_index]
 
-        when = random.randint(0, len(lecture.day) - 1)
+        # when = random.randrange(len(lecture.day))               # random.randrange is faster than np.random.randint
+        when = np.random.randint(0, len(lecture.day))
         day = lecture.day[when]
         time = lecture.time[when]
         zone = lecture.zone[when]
@@ -165,12 +164,28 @@ class PartialDistribution:
         self._counter.update_assignment(assigned_members, lecture_index)
         self._timetables = Assign.updated_members_timetable(assigned_members, day, time, self._timetables)
 
-    def assign_all_lectures(self):
-        indices = list(self.AGI_PLANS.index)
+    def assign_all_lectures(self, agilist: pd.DataFrame):
+        indices = list(agilist.index)
         for lecture_index in indices:
             print(lecture_index)
-            print(indices)
-            self.assign_a_lecture(lecture_index)
+            # print(agilist.loc[lecture_index, :])
+            self.assign_a_lecture(agilist, lecture_index)
+
+    def assign_until_success(self, max_iter: int = 20):
+        cnt = 0
+        while cnt < max_iter:
+            try:
+                self.assign_all_lectures(self._agilist)
+            except NoSolutionError:
+                print(self._counter.assigned_members_by_lecture)
+                print(list(self._agilist.index))
+                cnt += 1
+                self._counter = Counter(self._agilist)
+                self._timetables = members.LoadTimetables.read_multiple_timetables()
+                if cnt == max_iter:
+                    raise NoSolutionError
+                continue
+            break
 
     @property
     def assigned_lecture_by_members(self):
@@ -185,62 +200,20 @@ class PartialDistribution:
         return self._counter.assigned_members_by_lecture
 
 
-class TotalDistribution:
-    AGI_PLANS = agiplan.ModifiedAgiList().m_agilist
-
-    def __init__(self, partition: int):
-        self.split_plans = self._partition_plans(partition)
-
-    @classmethod
-    def _partition_plans(cls, partition: int) -> list[pd.DataFrame]:
-        lecture_indices = list(cls.AGI_PLANS.index)
-        np.random.shuffle(lecture_indices)
-
-        list_of_split_indices = np.array_split(lecture_indices, partition)
-        split_plans = []
-        for indices in list_of_split_indices:
-            split_plans.append(cls.AGI_PLANS.loc[indices])
-
-        return split_plans
-
-    @staticmethod
-    def assign_until_success(agi_plans: pd.DataFrame, max_iter: int = 20):
-        cnt = 0
-        while cnt < max_iter:
-            try:
-                dist = PartialDistribution(agi_plans)
-                dist.assign_all_lectures()
-            except NoSolutionError:
-                cnt += 1
-                if cnt == max_iter:
-                    raise NoSolutionError
-                continue
-            break
-        return (list[agi_plans.index],
-                dist.assigned_lecture_by_members, dist.assigned_number_by_members, dist.assigned_members_by_lecture)
-
-    def total_assign(self, max_iter):
-        results = []
-        for partition_plan in self.split_plans:
-            partition_result = self.assign_until_success(partition_plan, max_iter)
-            results.append(partition_result)
-        return results
-
-
 if __name__ == "__main__":
-    AGI_PLANS = agiplan.ModifiedAgiList().m_agilist
-    # dist = PartialDistribution(AGI_PLANS)
-    # # dist.assign_a_lecture(5)
-    # dist.assign_all_lectures()
-    # print(dist.assigned_lecture_by_members)
-    # print(dist.assigned_number_by_members)
-    # print(dist.assigned_members_by_lecture)
+    partition_numbers = 4
+    agilist_splitter = agiplan.AgiListPartition(partition_numbers)
+    total_agiplan = agilist_splitter.total_agilist
+    partition_agiplan_list = agilist_splitter.partition_agilist
 
-    total_dist = TotalDistribution(4)
-    results = total_dist.total_assign(max_iter=20)
-    for sub_result in results:
-        print("index : ", sub_result[0])
-        print("lecture by members", sub_result[1])
-        print("numbers by members", sub_result[2])
-        print("members by lecture", sub_result[3])
+    first = Distribution(total_agiplan.loc[:150])
 
+    total_index = list(total_agiplan.index)
+    # sub_index = total_index[:150]
+    np.random.shuffle(total_index)
+    first = Distribution(total_agiplan.loc[total_index])
+    # first = Distribution(total_agiplan.loc[total_index[:150]])
+    # first = Distribution(total_agiplan.loc[sub_index])
+
+    # first = Distribution(partition_agiplan_list[0])
+    first.assign_until_success(max_iter=20)
