@@ -1,4 +1,5 @@
 import campusmap
+import tools
 import os
 import pandas as pd
 import numpy as np
@@ -126,20 +127,9 @@ class ModifiedAgiList:
 
 
 class AgiListPartition(ModifiedAgiList):
-    def __init__(self, partition_numbers: int):
+    def __init__(self, partition_size: int):
         super().__init__()
-        self._partition = self._randomly_partition_agilist(partition_numbers)
-
-    def _randomly_partition_agilist(self, partition_numbers: int) -> list[pd.DataFrame]:
-        lecture_indices = list(super().m_agilist.index)
-        np.random.shuffle(lecture_indices)
-
-        list_of_split_indices = np.array_split(lecture_indices, partition_numbers)
-        split_agilists = []
-        for index in list_of_split_indices:
-            split_agilists.append(super().m_agilist.loc[index])
-
-        return split_agilists
+        self._partition = tools.RandomSplitDataFrame.split(super().m_agilist, partition_size)
 
     @property
     def total_agilist(self):
@@ -148,6 +138,21 @@ class AgiListPartition(ModifiedAgiList):
     @property
     def partition_agilist(self):
         return self._partition
+
+
+class AgilistPartitionGA(AgiListPartition):
+    def __init__(self, partition_size: int):
+        super().__init__(partition_size)
+        self._partition_ga = self.ga_only_partitioned_agilist(partition_size)
+
+    def ga_only_partitioned_agilist(self, partition_size: int):
+        ga_only_mask = super().m_agilist.zone.map(lambda lecture_zone_list: 'Y' not in lecture_zone_list)
+        ga_only_total_agilist = super().m_agilist.loc[ga_only_mask]
+        return tools.RandomSplitDataFrame.split(ga_only_total_agilist, partition_size)
+
+    @property
+    def ga_only_partition_agilist(self):
+        return self._partition_ga
 
 
 if __name__ == '__main__':
